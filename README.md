@@ -108,7 +108,7 @@ A local `.env` file can be provided to load environment variables from file
 **NgNodeEnvironment** supports multiple environments for local development.
 By default, a file named `environment.json` in the root folder of the app will be taken.
 
-This default behaviour can be changed through the `--in` option. 
+This default behaviour can be changed through the `--in` or `-i` option. 
 The following will read the file `./envs/default.json` and will write it into 
 `./src/environments/base.ts`.
 
@@ -116,7 +116,7 @@ The following will read the file `./envs/default.json` and will write it into
 $ node ./node_modules/ng-node-environment/index.js --in="./envs/default.json"
 ```
 
-The out file `base.ts` can be overridden with the `--out` option. 
+The out file `base.ts` can be overridden with the `--out` or `-o` option. 
 The following will read the file `./envs/staging.json` and will write it into 
 `./src/environments/staging.out.ts`.
 
@@ -124,7 +124,66 @@ The following will read the file `./envs/staging.json` and will write it into
 $ node ./node_modules/ng-node-environment/index.js --in="./envs/staging.json" --out="./src/environments/staging.out.ts"
 ```
 
-Multiple environments on `package.json`
+### sharedEnvironments
+The `sharedEnvironments` object name and filename can be changed with the `--name` or `-n` option.
+Example: -
+
+```bash
+$ node ./node_modules/ng-node-environment/index.js --name SharedSettings
+```
+
+This will output a Typescript file called `./src/environments/shared-settings.ts` containing :-
+
+```typescript
+export const SharedSettings = {
+  key: value... ,
+};
+
+export default SharedSettings;
+```
+
+And your `environment.prod.ts`, `environment.qa.ts` etc would reference it like this: -
+```typescript
+import { SharedSettings } from './shared-settings';
+
+export const environment = {
+  ...SharedSettings,
+  production: false,
+};
+```
+Or
+
+```typescript
+import { SharedSettings } from './shared-settings';
+
+export const environment = {
+  someproperty: SharedSettings.environmentVariableNameWithoutPrefix,
+  buildMachine: SharedSettings.computerName,
+  production: false,
+};
+```
+**Note**: Specifying an output filename with `--out` or `-o` will override the generated filename `shared-settings.ts`
+
+### Prefix
+The environment variable prefix 'NG_' can be changed with the `--prefix` or `-p` option.
+```bash
+$ node ./node_modules/ng-node-environment/index.js --prefix ABC
+```
+This will find all environment variables prefixed with 'ABC' instead of 'NG_' and generate properties without the prefix
+Example: -
+
+- ~~AVariableSkipped~~
+- **ABCSelected** -- Creates a property called cSelected
+- **ABCCSelected** -- Creates a property called cCselected
+- ~~BBBSkipped~~
+- ~~NG_Skipped~~
+- **ABCDSelected** -- Creates a property called dSelected
+- ~~XABCSkipped~~
+- ~~NG_ABCSkipped~~
+- **ABCImportantValue** -- Creates a property called importantValue
+
+
+### Multiple environments on `package.json`
 
 ```json
 {

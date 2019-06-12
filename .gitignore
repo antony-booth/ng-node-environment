@@ -1,5 +1,7 @@
 # dependencies
 /node_modules
+/src
+/test_configs
 
 # IDEs and editors
 /.idea
@@ -9,5 +11,6 @@
 *.launch
 .settings/
 *.sublime-workspace
+/.vscode
 
 test_configs

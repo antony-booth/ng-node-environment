@@ -1,48 +1,50 @@
 #! /usr/local/bin/node
 
-var commandLineArgs = require('command-line-args');
-var camelize = require('camelize');
-var fs = require('fs');
-var path = require('path');
-var appRoot = require('app-root-path');
-var currentValue, environmentProperty, environmentBase, tsString, booleanValue;
-
-var optionDefinitions = [
-  { name: 'out', alias: 'o', type: String },
-  { name: 'in', alias: 'i', type: String },
-];
-
-var options = commandLineArgs(optionDefinitions);
-var environmentPath = options['in'] || path.join(appRoot.toString(), 'environment.json');;
-var tsEnvironmentPath = options['out'] || path.join(appRoot.toString(), 'src', 'environments', 'base.ts')
-
-if (fs.existsSync(environmentPath)) {
-  console.log('Reading base environment: ' + environmentPath);
-  environmentBase = JSON.parse(fs.readFileSync(environmentPath, 'utf-8').toString());
-} else {
-  environmentBase = {};
-}
-
 require('dotenv').config();
 
-Object.keys(process.env).forEach(function (key) {
-  if (key.startsWith('NG_')) {
-    currentValue = process.env[key];
-    booleanValue = currentValue.toLowerCase();
-    environmentProperty = camelize(key.substr(3).toLowerCase());
-    if (booleanValue === 'true' || booleanValue === 'false') {
-      environmentBase[environmentProperty] = booleanValue === 'true';
-    } else {
-      environmentBase[environmentProperty] = currentValue;
+const commandLineArgs = require('command-line-args');
+const fs = require('fs');
+const path = require('path');
+const appRoot = require('app-root-path');
+const changeCase = require('change-case')
+
+const boolValues = ['true', 'false'];
+
+const options = commandLineArgs([
+  { name: 'out', alias: 'o', type: String },
+  { name: 'in', alias: 'i', type: String },
+  { name: 'name', alias: 'n', type: String },
+  { name: 'prefix', alias: 'p', type: String },
+]);
+
+const targetName = options['name'] || 'sharedEnvironment';
+const targetFileName = options['name'] || 'base';
+
+const prefix = options['prefix'] || 'NG_';
+const sourceFile = options['in'] || path.join(appRoot.toString(), 'environment.json');
+const filePath = options['out'] || path.join(appRoot.toString(), 'src', 'environments', `${changeCase.paramCase(targetFileName)}.ts`);
+
+const targetObject = fs.existsSync(sourceFile) ? JSON.parse(fs.readFileSync(sourceFile, 'utf-8').toString()) : {};
+
+Object.keys(process.env).forEach(key => {
+  if (key.startsWith(prefix) && key.length > prefix.length) {
+    const value = process.env[key];
+    if (!!value && value.length) {
+      const propertyName = changeCase.camelCase(key.substr(prefix.length).toLowerCase());
+      const boolValue = value.toLowerCase();
+      targetObject[propertyName] = boolValues.includes(boolValue)
+        ? boolValue === 'true'
+        : value;
     }
   }
 });
 
-var envJson = JSON.stringify(environmentBase, null, '  ').replace(/\"/g,"'");
-tsString = "export const sharedEnvironment = " + envJson + "\n\nexport default sharedEnvironment;";
+const serializedSettings = JSON.stringify(targetObject, null, '  ').replace(/\"/g, "'");
+const fileContents = `export const ${targetName} = ${serializedSettings};\n\nexport default ${targetName};`;
 
-console.log('Writing variables from process.env: ' + tsEnvironmentPath);
+const destinationPath = path.dirname(filePath);
+if (!fs.existsSync(destinationPath)) {
+  fs.mkdirSync(destinationPath, { recursive: true });
+}
 
-fs.writeFileSync(tsEnvironmentPath, tsString);
-
-console.log('Finished');
+fs.writeFileSync(filePath, fileContents);
