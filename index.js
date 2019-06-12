@@ -8,21 +8,27 @@ const path = require('path');
 const appRoot = require('app-root-path');
 const changeCase = require('change-case')
 
+const parameters = {
+  in: { full: 'in', short: 'i' },
+  out: { full: 'out', short: 'o' },
+  name: { full: 'name', short: 'n' },
+  prefix: { full: 'prefix', short: 'p' }
+}
+
 const boolValues = ['true', 'false'];
 
 const options = commandLineArgs([
-  { name: 'out', alias: 'o', type: String },
-  { name: 'in', alias: 'i', type: String },
-  { name: 'name', alias: 'n', type: String },
-  { name: 'prefix', alias: 'p', type: String },
+  createParameter(parameters.in),
+  createParameter(parameters.out),
+  createParameter(parameters.prefix),
+  createParameter(parameters.name)
 ]);
 
-const targetName = options['name'] || 'sharedEnvironment';
-const targetFileName = options['name'] || 'base';
-
-const prefix = options['prefix'] || 'NG_';
-const sourceFile = options['in'] || path.join(appRoot.toString(), 'environment.json');
-const filePath = options['out'] || path.join(appRoot.toString(), 'src', 'environments', `${changeCase.paramCase(targetFileName)}.ts`);
+const targetName = getOption(parameters.name) || 'sharedEnvironment';
+const targetFileName = getOption(parameters.name) || 'base';
+const prefix = getOption(parameters.prefix) || 'NG_';
+const sourceFile = getOption(parameters.in) || path.join(appRoot.toString(), 'environment.json');
+const filePath = getOption(parameters.out) || path.join(appRoot.toString(), 'src', 'environments', `${changeCase.paramCase(targetFileName)}.ts`);
 
 const targetObject = fs.existsSync(sourceFile) ? JSON.parse(fs.readFileSync(sourceFile, 'utf-8').toString()) : {};
 
@@ -48,3 +54,11 @@ if (!fs.existsSync(destinationPath)) {
 }
 
 fs.writeFileSync(filePath, fileContents);
+
+function createParameter(parameter) {
+  return { name: parameter.full, alias: parameter.short, type: String };
+}
+
+function getOption(parameter) {
+  return options[parameter.full];
+}

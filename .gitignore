@@ -12,5 +12,4 @@
 .settings/
 *.sublime-workspace
 /.vscode
-
-test_configs
+/.env
